@@ -13,30 +13,33 @@ interface ComProps {
   height?: number | string,
   tables: Array<ITable>,
   relations: Array<IRelation>,
+  columns: Array<columns>, // Add this line
+  operator: any, // Add this line. You may want to specify a more precise type if possible
   className?: string,
   actionMenu: action[],                              // action菜单
   config?: {
-    titleRender: (node:ITable) => void,              // 自定义节点的title render
+    titleRender?: (node:ITable) => void,              // 自定义节点的title render
     showActionIcon?: boolean,                        // 是否展示操作icon：放大，缩小，聚焦
-    enableHoverChain: boolean,                       // 是否开启hover高亮血缘链路
+    enableHoverChain?: boolean,                       // 是否开启hover高亮血缘链路
     minimap?: {                                      // 是否开启缩略图
       enable: boolean,
-      config: {
+      config?: {
         nodeColor: any
       }
     },
-    gridMode: {
+    gridMode?: {
       isAdsorb: boolean,
       theme: {
         shapeType: string,                          // 展示的类型，支持line & circle
         gap: number,                                // 网格间隙
-        lineWidth: 1,                               // 线段粗细
+        lineWidth: number,                               // 线段粗细
         lineColor: string,                          // 线段颜色
         circleRadiu: number,                        // 圆点半径
         circleColor: string                         // 圆点颜色
       }
     },
-    butterfly: any;                                 // 小蝴蝶的画布配置，参考：https://github.com/alibaba/butterfly/blob/dev/v4/docs/zh-CN/canvas.md
+    butterfly?: any,                                 // 小蝴蝶的画布配置，参考：https://github.com/alibaba/butterfly/blob/dev/v4/docs/zh-CN/canvas.md
+    delayDraw?: number
   },
   emptyContent?: string | JSX.Element,
   emptyWidth?: number | string,
@@ -70,11 +73,11 @@ interface columns {
 
 
 export default class LineageDag extends React.Component<ComProps, any> {
-  props: any;
   protected _isFirstFocus: any;
   protected canvas: any;
   protected canvasData: any;
   protected originEdges: any;
+
   constructor(props: ComProps) {
     super(props);
     this.canvas = null;
@@ -124,7 +127,7 @@ export default class LineageDag extends React.Component<ComProps, any> {
     let result = transformInitData({
       tables: this.props.tables,
       relations: this.props.relations,
-      columns: this.props.columns,
+      columns: this.props.columns, // Ensure columns is passed here
       operator: this.props.operator,
       _titleRender: titleRender,
       _enableHoverChain: enableHoverChain,
@@ -156,21 +159,21 @@ export default class LineageDag extends React.Component<ComProps, any> {
         // this.canvas.wrapper.style.visibility = 'visible';
         this.canvas.addEdges(tmpEdges, true);
 
-        let minimap = _.get(this, 'props.config.minimap', {});
+        let minimap = _.get(this.props, 'config.minimap', {});
 
-        const minimapCfg = _.assign({}, minimap.config, {
-          events: [
-            'system.node.click',
-            'system.canvas.click'
-          ]
-        });
+        // const minimapCfg = _.assign({}, minimap.config, {
+        //   events: [
+        //     'system.node.click',
+        //     'system.canvas.click'
+        //   ]
+        // });
 
-        if (minimap && minimap.enable) {
-          this.canvas.setMinimap(true, minimapCfg);
-        }
+        // if (minimap && minimap.enable) {
+        //   this.canvas.setMinimap(true, minimapCfg);
+        // }
 
-        if (_.get(this, 'props.config.gridMode')) {
-          this.canvas.setGridMode(true, _.assign({}, _.get(this, 'props.config.gridMode', {})))
+        if (_.get(this.props, 'config.gridMode')) {
+          this.canvas.setGridMode(true, _.assign({}, _.get(this.props, 'config.gridMode', {})))
         }
 
         if (result.nodes.length !== 0) {
@@ -199,7 +202,7 @@ export default class LineageDag extends React.Component<ComProps, any> {
     let result = transformInitData({
       tables: newProps.tables,
       relations: newProps.relations,
-      columns: this.props.columns,
+      columns: newProps.columns, // Ensure columns is passed here
       operator: this.props.operator,
       _titleRender: titleRender,
       _enableHoverChain: enableHoverChain,
@@ -281,7 +284,7 @@ export default class LineageDag extends React.Component<ComProps, any> {
   render() {
     const {canvas} = this;
     const {actionMenu = []} = this.props;
-    const actionMenuVisible = _.get(this, 'props.config.showActionIcon', true);
+    const actionMenuVisible = _.get(this.props, 'config.showActionIcon', true);
 
     return (
       <div
