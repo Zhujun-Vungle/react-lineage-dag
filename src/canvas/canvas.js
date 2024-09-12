@@ -9,6 +9,8 @@ export default class LineageCanvas extends Canvas {
     this._renderPromise = Promise.resolve();
     this._focusItem = null;
     this._enableHoverChain = opts.data.enableHoverChain;
+    this.nodeStep = opts.data.nodeStep || 50; // Default to 50 if not provided
+    this.rankStep = opts.data.rankStep || 70; // Default to 70 if not provided
     this.attachEvent();
   }
   attachEvent() {
@@ -235,13 +237,10 @@ export default class LineageCanvas extends Canvas {
       });
     }
 
-    const NODESTEP = 50;
-    const RANKSTEP = 70;
-
     Layout.dagreLayout({
       rankdir: 'LR',
-      nodesep:  NODESTEP,
-      ranksep:  RANKSTEP,
+      nodesep: this.nodeStep,
+      ranksep: this.rankStep,
       data: {
         nodes: nodesData,
         edges: edgesData
@@ -249,7 +248,7 @@ export default class LineageCanvas extends Canvas {
     });
 
     // 调整darge后的位置
-    this._precollide(nodesData, NODESTEP, RANKSTEP);
+    this._precollide(nodesData, this.nodeStep, this.rankStep);
 
     // 调整相对节点的坐标
     if (options && options.centerNodeId) {
@@ -274,6 +273,11 @@ export default class LineageCanvas extends Canvas {
     if (!isInit && edges.length > 30) {
       $(this.svg).css('visibility', 'visible');
     }
+
+    this.edges.forEach(edge => {
+      const path = drawManhattan(edge.sourcePoint, edge.targetPoint, this.nodes);
+      edge.redraw(path);
+    });
   }
   addNodes(nodes, isNotEventEmit) {
     let _addNodes = super.addNodes(nodes, isNotEventEmit);

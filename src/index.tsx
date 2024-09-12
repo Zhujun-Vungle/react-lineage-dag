@@ -87,9 +87,10 @@ export default class LineageDag extends React.Component<ComProps, any> {
   }
   componentDidMount() {
     let root = ReactDOM.findDOMNode(this) as HTMLElement;
-
     let enableHoverChain = _.get(this.props, 'config.enableHoverChain', true);
     let titleRender = _.get(this.props, 'config.titleRender');
+    let nodeStep = _.get(this.props, 'config.nodeStep', 50);
+    let rankStep = _.get(this.props, 'config.rankStep', 70);
 
     let canvasObj = {
       root: root,
@@ -118,7 +119,9 @@ export default class LineageDag extends React.Component<ComProps, any> {
         }
       },
       data: {
-        enableHoverChain: enableHoverChain
+        enableHoverChain: enableHoverChain,
+        nodeStep: nodeStep,
+        rankStep: rankStep
       }
     };
 
