@@ -161,7 +161,7 @@ export default class LineageDag extends React.Component<ComProps, any> {
         }, true);
         // this.canvas.wrapper.style.visibility = 'visible';
         this.canvas.addEdges(tmpEdges, true);
-        this.canvas.redraw();  // Add this line
+        // this.canvas.redraw();  // Add this line
 
         let minimap = _.get(this.props, 'config.minimap', {});
 
