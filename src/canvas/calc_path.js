@@ -283,18 +283,17 @@ function drawManhattan(sourcePoint, targetPoint, nodes) {
     '01': BOTTOM,
   };
 
-  const rankStep = 70; // You may need to adjust this value or get it from somewhere else
-  const columnMap = createColumnMap(nodes, rankStep);
+  const columnMap = createColumnMap(nodes);
 
-  _routeCombined(pointArr, fromPt, orientation[sourcePoint.orientation.join('')], toPt, orientation[targetPoint.orientation.join('')], columnMap, rankStep);
+  _routeCombined(pointArr, fromPt, orientation[sourcePoint.orientation.join('')], toPt, orientation[targetPoint.orientation.join('')], columnMap);
 
   return getPath(pointArr);
 }
 
-function createColumnMap(nodes, rankStep) {
+function createColumnMap(nodes) {
   const columnMap = {};
   nodes.forEach(node => {
-    const column = Math.floor(node.left / rankStep);
+    const column = Math.floor(node.left);
     if (!columnMap[column]) {
       columnMap[column] = [];
     }
@@ -303,39 +302,84 @@ function createColumnMap(nodes, rankStep) {
   return columnMap;
 }
 
-function _routeCombined(conn, fromPt, fromDir, toPt, toDir, columnMap, rankStep) {
-  const startColumn = Math.floor(fromPt.x / rankStep);
-  const endColumn = Math.floor(toPt.x / rankStep);
+function _routeCombined(conn, fromPt, fromDir, toPt, toDir, columnMap) {
+  console.log('_routeCombined input:', { fromPt, fromDir, toPt, toDir });
+
+  // Log all columnMap info
+  console.log('Full columnMap info:');
+  for (let col in columnMap) {
+    console.log(`Column ${col}:`, columnMap[col].map(node => ({
+      left: node.left,
+      top: node.top,
+      width: node.width,
+      height: node.height
+    })));
+  }
+
+  // Determine the columns for start and end points
+  const columns = Object.keys(columnMap).map(Number).sort((a, b) => a - b);
+  const startColumn = columns.find(col => col >= fromPt.x) || columns[columns.length - 1];
+  const endColumn = columns.find(col => col >= toPt.x) || columns[columns.length - 1];
   const minColumn = Math.min(startColumn, endColumn);
   const maxColumn = Math.max(startColumn, endColumn);
 
-  let middleLowestY = -Infinity;
-  for (let col = minColumn + 1; col < maxColumn; col++) {
-    if (columnMap[col]) {
-      const columnLowestY = Math.max(...columnMap[col].map(node => node.top + node.height));
-      middleLowestY = Math.max(middleLowestY, columnLowestY);
+  console.log('Columns:', { startColumn, endColumn, minColumn, maxColumn });
+
+  // Create virtual points between columns
+  let virtualPoints = [fromPt];
+  let maxY = Math.max(fromPt.y, toPt.y);
+
+  for (let col = minColumn; col <= maxColumn; col++) {
+    if (columnMap[col] && columnMap[col].length > 0) {
+      const nodesInColumn = columnMap[col];
+      const lowestNodeBottom = Math.max(...nodesInColumn.map(node => node.top + node.height));
+      maxY = Math.max(maxY, lowestNodeBottom);
     }
   }
 
-  if (!isFinite(middleLowestY)) {
-    return _route(conn, fromPt, fromDir, toPt, toDir);
+  // Add some padding to maxY
+  maxY += 50;
+
+  for (let i = 0; i < columns.length - 1; i++) {
+    const currentCol = columns[i];
+    const nextCol = columns[i + 1];
+    
+    if (currentCol >= minColumn && nextCol <= maxColumn) {
+      const midX = (currentCol + nextCol) / 2;
+      virtualPoints.push(new Point(midX, maxY));
+    }
   }
 
-  middleLowestY += 60; // Add padding
+  virtualPoints.push(toPt);
 
-  let midPoint = new Point(fromPt.x, middleLowestY);
-  _route(conn, fromPt, fromDir, midPoint, BOTTOM);
+  console.log('Virtual points:', virtualPoints);
 
-  for (let col = minColumn + 1; col < maxColumn; col++) {
-    const point = new Point(col * rankStep, middleLowestY);
-    conn.push(point);
+  // Iterate through virtual points and apply _route
+  for (let i = 0; i < virtualPoints.length - 1; i++) {
+    const currentPt = virtualPoints[i];
+    const nextPt = virtualPoints[i + 1];
+    let currentDir, nextDir;
+
+    if (i === 0) {
+      currentDir = fromDir;
+    } else {
+      currentDir = currentPt.y < nextPt.y ? BOTTOM : TOP;
+    }
+
+    if (i === virtualPoints.length - 2) {
+      nextDir = toDir;
+    } else {
+      nextDir = currentPt.y < nextPt.y ? TOP : BOTTOM;
+    }
+
+    let tempConn = [];
+    _route(tempConn, currentPt, currentDir, nextPt, nextDir);
+
+    if (i > 0) {
+      tempConn.shift(); // Remove the first point to avoid duplication
+    }
+    conn.push(...tempConn);
   }
-
-  midPoint = new Point(toPt.x, middleLowestY);
-  let tempConn = [];
-  _route(tempConn, midPoint, TOP, toPt, toDir);
-  tempConn.shift();
-  conn.push(...tempConn);
 }
 
 function getPath(pointArr) {
