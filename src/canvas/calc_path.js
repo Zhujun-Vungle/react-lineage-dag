@@ -7,7 +7,7 @@ const BOTTOM = 'Bottom';
 const MINDIST = 60;
 const TOL = 0.1;
 const TOLxTOL = 0.01;
-const DEFAULT_RADIUS = 15;
+const DEFAULT_RADIUS = 0;
 
 const Point = function (x, y) {
   this.x = x;
