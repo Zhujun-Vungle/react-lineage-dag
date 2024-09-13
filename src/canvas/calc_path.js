@@ -258,7 +258,7 @@ const getDrawPoint = (start, control, end, radius) => {
   return [start, p1, p2, flag];
 };
 
-function drawManhattan(sourcePoint, targetPoint) {
+function drawManhattan(sourcePoint, targetPoint, nodes) {
   if (!sourcePoint.orientation) {
     sourcePoint.orientation = _calcOrientation(targetPoint.pos[0], targetPoint.pos[1], sourcePoint.pos[0], sourcePoint.pos[1]);
   }
@@ -282,8 +282,63 @@ function drawManhattan(sourcePoint, targetPoint) {
     '0-1': TOP,
     '01': BOTTOM,
   };
-  // link:connect 中 orientation = undefined
-  _route(pointArr, fromPt, orientation[sourcePoint.orientation.join('')], toPt, orientation[targetPoint.orientation.join('')]);
+
+  const rankStep = 70; // You may need to adjust this value or get it from somewhere else
+  const columnMap = createColumnMap(nodes, rankStep);
+
+  _routeCombined(pointArr, fromPt, orientation[sourcePoint.orientation.join('')], toPt, orientation[targetPoint.orientation.join('')], columnMap, rankStep);
+
+  return getPath(pointArr);
+}
+
+function createColumnMap(nodes, rankStep) {
+  const columnMap = {};
+  nodes.forEach(node => {
+    const column = Math.floor(node.left / rankStep);
+    if (!columnMap[column]) {
+      columnMap[column] = [];
+    }
+    columnMap[column].push(node);
+  });
+  return columnMap;
+}
+
+function _routeCombined(conn, fromPt, fromDir, toPt, toDir, columnMap, rankStep) {
+  const startColumn = Math.floor(fromPt.x / rankStep);
+  const endColumn = Math.floor(toPt.x / rankStep);
+  const minColumn = Math.min(startColumn, endColumn);
+  const maxColumn = Math.max(startColumn, endColumn);
+
+  let middleLowestY = -Infinity;
+  for (let col = minColumn + 1; col < maxColumn; col++) {
+    if (columnMap[col]) {
+      const columnLowestY = Math.max(...columnMap[col].map(node => node.top + node.height));
+      middleLowestY = Math.max(middleLowestY, columnLowestY);
+    }
+  }
+
+  if (!isFinite(middleLowestY)) {
+    return _route(conn, fromPt, fromDir, toPt, toDir);
+  }
+
+  middleLowestY += 60; // Add padding
+
+  let midPoint = new Point(fromPt.x, middleLowestY);
+  _route(conn, fromPt, fromDir, midPoint, BOTTOM);
+
+  for (let col = minColumn + 1; col < maxColumn; col++) {
+    const point = new Point(col * rankStep, middleLowestY);
+    conn.push(point);
+  }
+
+  midPoint = new Point(toPt.x, middleLowestY);
+  let tempConn = [];
+  _route(tempConn, midPoint, TOP, toPt, toDir);
+  tempConn.shift();
+  conn.push(...tempConn);
+}
+
+function getPath(pointArr) {
   if (pointArr.length < 2) return '';
 
   if (pointArr.length === 2) {
@@ -333,4 +388,4 @@ function drawManhattan(sourcePoint, targetPoint) {
   ].join(' ');
 }
 
-export default drawManhattan;
+export { drawManhattan };

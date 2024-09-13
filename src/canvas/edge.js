@@ -4,6 +4,7 @@ import {Edge} from 'butterfly-dag';
 import $ from 'jquery';
 
 import calcPath from './calc_path';
+import { drawManhattan } from './calc_path';
 
 export default class MEdge extends Edge {
   constructor(opts) {
@@ -19,7 +20,11 @@ export default class MEdge extends Edge {
     }
   }
   calcPath(sourcePoint, targetPoint) {
-    return calcPath(sourcePoint, targetPoint);
+    if (this.sourceNode && this.sourceNode._canvas) {
+      return drawManhattan(sourcePoint, targetPoint, this.sourceNode._canvas.nodes);
+    } else {
+      return super.calcPath(sourcePoint, targetPoint);
+    }
   }
   focusChain(addClass = 'hover-chain') {
     $(this.dom).addClass(addClass);
