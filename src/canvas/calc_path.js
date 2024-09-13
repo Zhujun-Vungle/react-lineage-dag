@@ -293,11 +293,15 @@ function drawManhattan(sourcePoint, targetPoint, nodes) {
 function createColumnMap(nodes) {
   const columnMap = {};
   nodes.forEach(node => {
-    const column = Math.floor(node.left);
+    const centerX = node.left + (node.width / 2);
+    const column = Math.floor(centerX);
     if (!columnMap[column]) {
       columnMap[column] = [];
     }
-    columnMap[column].push(node);
+    columnMap[column].push({
+      ...node,
+      centerX: centerX
+    });
   });
   return columnMap;
 }
@@ -340,13 +344,28 @@ function _routeCombined(conn, fromPt, fromDir, toPt, toDir, columnMap) {
   // Add some padding to maxY
   maxY += 50;
 
+  const MIN_DISTANCE = 60;
+
   for (let i = 0; i < columns.length - 1; i++) {
     const currentCol = columns[i];
     const nextCol = columns[i + 1];
     
     if (currentCol >= minColumn && nextCol <= maxColumn) {
       const midX = (currentCol + nextCol) / 2;
-      virtualPoints.push(new Point(midX, maxY));
+      
+      // Apply the new rules
+      if (i === 0 && fromDir === LEFT) {
+        // For the first middle point when fromDir is LEFT
+        virtualPoints.push(new Point(midX, maxY));
+      } else if (i > 0) {
+        // For subsequent middle points
+        const prevPoint = virtualPoints[virtualPoints.length - 1];
+        if (midX - prevPoint.x >= MIN_DISTANCE) {
+          virtualPoints.push(new Point(midX, maxY));
+        }
+      } else {
+        virtualPoints.push(new Point(midX, maxY));
+      }
     }
   }
 
@@ -363,13 +382,13 @@ function _routeCombined(conn, fromPt, fromDir, toPt, toDir, columnMap) {
     if (i === 0) {
       currentDir = fromDir;
     } else {
-      currentDir = currentPt.y < nextPt.y ? BOTTOM : TOP;
+      currentDir = RIGHT;
     }
 
     if (i === virtualPoints.length - 2) {
       nextDir = toDir;
     } else {
-      nextDir = currentPt.y < nextPt.y ? TOP : BOTTOM;
+      nextDir = LEFT;
     }
 
     let tempConn = [];
