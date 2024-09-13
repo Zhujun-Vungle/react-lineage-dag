@@ -342,7 +342,7 @@ function _routeCombined(conn, fromPt, fromDir, toPt, toDir, columnMap) {
   }
 
   // Add some padding to maxY
-  maxY += 50;
+  maxY += 100;
 
   for (let i = 0; i < columns.length - 1; i++) {
     const currentCol = columns[i];
@@ -387,7 +387,7 @@ function _routeCombined(conn, fromPt, fromDir, toPt, toDir, columnMap) {
     }
 
     let tempConn = [];
-    _route(tempConn, currentPt, currentDir, nextPt, nextDir, 3);
+    _route(tempConn, currentPt, currentDir, nextPt, nextDir, 4);
 
     if (i > 0) {
       tempConn.shift(); // Remove the first point to avoid duplication
