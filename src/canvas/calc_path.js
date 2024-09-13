@@ -259,6 +259,7 @@ const getDrawPoint = (start, control, end, radius) => {
 };
 
 function drawManhattan(sourcePoint, targetPoint, nodes) {
+  console.log('drawManhattan input:', { sourcePoint, targetPoint, nodes });
   if (!sourcePoint.orientation) {
     sourcePoint.orientation = _calcOrientation(targetPoint.pos[0], targetPoint.pos[1], sourcePoint.pos[0], sourcePoint.pos[1]);
   }
@@ -286,7 +287,6 @@ function drawManhattan(sourcePoint, targetPoint, nodes) {
   const columnMap = createColumnMap(nodes);
 
   _routeCombined(pointArr, fromPt, orientation[sourcePoint.orientation.join('')], toPt, orientation[targetPoint.orientation.join('')], columnMap);
-
   return getPath(pointArr);
 }
 
@@ -307,18 +307,18 @@ function createColumnMap(nodes) {
 }
 
 function _routeCombined(conn, fromPt, fromDir, toPt, toDir, columnMap) {
-  console.log('_routeCombined input:', { fromPt, fromDir, toPt, toDir });
+  // console.log('_routeCombined input:', { fromPt, fromDir, toPt, toDir });
 
   // Log all columnMap info
-  console.log('Full columnMap info:');
-  for (let col in columnMap) {
-    console.log(`Column ${col}:`, columnMap[col].map(node => ({
-      left: node.left,
-      top: node.top,
-      width: node.width,
-      height: node.height
-    })));
-  }
+  // console.log('Full columnMap info:');
+  // for (let col in columnMap) {
+  //   console.log(`Column ${col}:`, columnMap[col].map(node => ({
+  //     left: node.left,
+  //     top: node.top,
+  //     width: node.width,
+  //     height: node.height
+  //   })));
+  // }
 
   // Determine the columns for start and end points
   const columns = Object.keys(columnMap).map(Number).sort((a, b) => a - b);
@@ -327,7 +327,7 @@ function _routeCombined(conn, fromPt, fromDir, toPt, toDir, columnMap) {
   const minColumn = Math.min(startColumn, endColumn);
   const maxColumn = Math.max(startColumn, endColumn);
 
-  console.log('Columns:', { startColumn, endColumn, minColumn, maxColumn });
+  // console.log('Columns:', { startColumn, endColumn, minColumn, maxColumn });
 
   // Create virtual points between columns
   let virtualPoints = [fromPt];
@@ -344,23 +344,18 @@ function _routeCombined(conn, fromPt, fromDir, toPt, toDir, columnMap) {
   // Add some padding to maxY
   maxY += 50;
 
-  const MIN_DISTANCE = 60;
-
   for (let i = 0; i < columns.length - 1; i++) {
     const currentCol = columns[i];
     const nextCol = columns[i + 1];
     
     if (currentCol >= minColumn && nextCol <= maxColumn) {
-      const midX = (currentCol + nextCol) / 2;
-      
+      const midX = currentCol + (nextCol - currentCol) / 2;
       // Apply the new rules
       if (i === 0 && fromDir === LEFT) {
         // For the first middle point when fromDir is LEFT
         virtualPoints.push(new Point(midX, maxY));
       } else if (i > 0) {
         // For subsequent middle points
-        const prevPoint = virtualPoints[virtualPoints.length - 1];
-        // if (midX - prevPoint.x >= MIN_DISTANCE) {
           virtualPoints.push(new Point(midX, maxY));
         // }
       } else {
