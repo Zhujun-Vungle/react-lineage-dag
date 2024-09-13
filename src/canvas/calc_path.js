@@ -4,7 +4,7 @@ const LEFT = 'Left';
 const RIGHT = 'Right';
 const TOP = 'Top';
 const BOTTOM = 'Bottom';
-const MINDIST = 20;
+const MINDIST = 60;
 const TOL = 0.1;
 const TOLxTOL = 0.01;
 const DEFAULT_RADIUS = 15;
@@ -15,7 +15,7 @@ const Point = function (x, y) {
 };
 
 // 曼哈顿折线路由算法
-function _route(conn, fromPt, fromDir, toPt, toDir) {
+function _route(conn, fromPt, fromDir, toPt, toDir, turnPct = 2) {
   // 防止图上节点隐藏NaN的死循环问题
   fromPt.x = fromPt.x || 0;
   fromPt.y = fromPt.y || 0;
@@ -48,7 +48,7 @@ function _route(conn, fromPt, fromDir, toPt, toDir) {
         pos = Math.min(fromPt.x, toPt.x) - MINDIST;
         point = new Point(pos, fromPt.y);
       } else {
-        point = new Point(fromPt.x - (xDiff / 2), fromPt.y);
+        point = new Point(fromPt.x - (xDiff / turnPct), fromPt.y);
       }
 
       if (yDiff > 0) {
@@ -70,7 +70,7 @@ function _route(conn, fromPt, fromDir, toPt, toDir) {
         pos = Math.max(fromPt.x, toPt.x) + MINDIST;
         point = new Point(pos, fromPt.y);
       } else {
-        point = new Point(fromPt.x - (xDiff / 2), fromPt.y);
+        point = new Point(fromPt.x - (xDiff / turnPct), fromPt.y);
       }
 
       if (yDiff > 0) {
@@ -125,7 +125,7 @@ function _route(conn, fromPt, fromDir, toPt, toDir) {
     }
   }
 
-  _route(conn, point, dir, toPt, toDir);
+  _route(conn, point, dir, toPt, toDir, turnPct);
 }
 
 const getDefaultPath = (pointArr) => {
@@ -360,9 +360,9 @@ function _routeCombined(conn, fromPt, fromDir, toPt, toDir, columnMap) {
       } else if (i > 0) {
         // For subsequent middle points
         const prevPoint = virtualPoints[virtualPoints.length - 1];
-        if (midX - prevPoint.x >= MIN_DISTANCE) {
+        // if (midX - prevPoint.x >= MIN_DISTANCE) {
           virtualPoints.push(new Point(midX, maxY));
-        }
+        // }
       } else {
         virtualPoints.push(new Point(midX, maxY));
       }
@@ -392,7 +392,7 @@ function _routeCombined(conn, fromPt, fromDir, toPt, toDir, columnMap) {
     }
 
     let tempConn = [];
-    _route(tempConn, currentPt, currentDir, nextPt, nextDir);
+    _route(tempConn, currentPt, currentDir, nextPt, nextDir, 3);
 
     if (i > 0) {
       tempConn.shift(); // Remove the first point to avoid duplication
