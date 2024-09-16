@@ -278,6 +278,13 @@ export default class TableNode extends Node {
           });
         }
 
+        $(fieldDom).on('click', (e) => {
+          this.emit('custom.field.click', {
+            node: this,
+            fieldId: _field[_primaryKey]
+          });
+        });
+
         container.append(fieldDom);
 
         result.push({

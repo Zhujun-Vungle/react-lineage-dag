@@ -21,6 +21,7 @@ interface ComProps {
     titleRender?: (node:ITable) => void,              // 自定义节点的title render
     showActionIcon?: boolean,                        // 是否展示操作icon：放大，缩小，聚焦
     enableHoverChain?: boolean,                       // 是否开启hover高亮血缘链路
+    enableClickedChain?: boolean,                     // 是否开启点击高亮血缘链路
     minimap?: {                                      // 是否开启缩略图
       enable: boolean,
       config?: {

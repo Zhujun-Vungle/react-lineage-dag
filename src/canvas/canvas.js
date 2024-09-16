@@ -13,6 +13,8 @@ export default class LineageCanvas extends Canvas {
     this.nodeStep = opts.data.nodeStep || 50; // Default to 50 if not provided
     this.rankStep = opts.data.rankStep || 70; // Default to 70 if not provided
     this.attachEvent();
+    this._clickedLineage = opts.data.enableClickedLineage;
+    this._clickedField = null;
   }
   attachEvent() {
     if (this._enableHoverChain) {
@@ -35,6 +37,33 @@ export default class LineageCanvas extends Canvas {
         edges = this.getNeighborEdges(node.id);
       }
       edges.forEach((edge) => edge.redraw());
+    });
+    this.on('custom.field.click', (data) => {
+      if (this._clickedField &&
+          this._clickedField.nodeId === data.node.id &&
+          this._clickedField.fieldId === data.fieldId) {
+        // Clicking the same field again, unfocus it
+        this.unfocusField();
+      } else {
+        // Focus on the new field
+        this.focusField(data.node.id, data.fieldId);
+      }
+
+      if (!this._clickedLineage || 
+          this._clickedLineage.nodeId !== data.node.id || 
+          this._clickedLineage.fieldId !== data.fieldId) {
+        // Unfocus previous chain if exists
+        if (this._clickedLineage) {
+          this.unfocusChain(this._clickedLineage.nodeId, this._clickedLineage.fieldId, 'clicked-chain');
+        }
+        // Focus new chain
+        this.focusChain(data.node.id, data.fieldId, 'clicked-chain');
+        this._clickedLineage = { nodeId: data.node.id, fieldId: data.fieldId };
+      } else {
+        // Unfocus if clicking the same field again
+        this.unfocusChain(data.node.id, data.fieldId, 'clicked-chain');
+        this._clickedLineage = null;
+      }
     });
   }
   focus(nodeId) {
@@ -286,5 +315,31 @@ export default class LineageCanvas extends Canvas {
       node._canvas = this;
     });
     return _addNodes;
+  }
+  
+  focusField(nodeId, fieldId) {
+    this.unfocusField();
+    let node = this.getNode(nodeId);
+    if (node) {
+      let field = node.fieldsList.find(f => f.id === fieldId);
+      if (field && field.dom) {
+        this._clickedField = { nodeId, fieldId };
+        field.dom.addClass('clicked-field');
+      }
+    }
+  }
+
+  unfocusField() {
+    if (this._clickedField) {
+      const { nodeId, fieldId } = this._clickedField;
+      let node = this.getNode(nodeId);
+      if (node) {
+        let field = node.fieldsList.find(f => f.id === fieldId);
+        if (field && field.dom) {
+          field.dom.removeClass('clicked-field');
+        }
+      }
+      this._clickedField = null;
+    }
   }
 }

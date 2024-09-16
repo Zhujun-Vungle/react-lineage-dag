@@ -52,6 +52,18 @@
           background: #ff6a00;
         }
       }
+      &.clicked-chain {
+        background: #fef0e5;
+        .point {
+          background: #ff6a00;
+        }
+      }
+      &.clicked-field {
+        background: #f6a164;
+        .point {
+          background: #ff6a00;
+        }
+      }
       .field-item {
         display: inline-block;
         min-width: 50px;
@@ -93,9 +105,16 @@
     &.hover-chain {
       stroke: #F66902;
     }
+    &.clicked-chain {
+      stroke: #F66902;
+    }
   }
   .butterflies-arrow {
     &.hover-chain {
+      stroke: #F66902;
+      fill: #F66902;
+    }
+    &.clicked-chain {
       stroke: #F66902;
       fill: #F66902;
     }
