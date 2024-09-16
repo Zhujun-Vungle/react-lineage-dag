@@ -46,8 +46,27 @@
       position: relative;
       margin: 0 16px;
       white-space: nowrap;
+      transition: background-color 0.3s ease;
+      cursor: pointer;
+
+      &:hover {
+        background-color: rgba(255, 106, 0, 0.2);
+      }
+
       &.hover-chain {
         background: #fef0e5;
+        .point {
+          background: #ff6a00;
+        }
+      }
+      &.clicked-chain {
+        background: #fef0e5;
+        .point {
+          background: #ff6a00;
+        }
+      }
+      &.clicked-field {
+        background: #f6a164;
         .point {
           background: #ff6a00;
         }
@@ -93,9 +112,16 @@
     &.hover-chain {
       stroke: #F66902;
     }
+    &.clicked-chain {
+      stroke: #F66902;
+    }
   }
   .butterflies-arrow {
     &.hover-chain {
+      stroke: #F66902;
+      fill: #F66902;
+    }
+    &.clicked-chain {
       stroke: #F66902;
       fill: #F66902;
     }
