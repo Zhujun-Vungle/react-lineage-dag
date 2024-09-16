@@ -7,7 +7,7 @@ const BOTTOM = 'Bottom';
 const MINDIST = 60;
 const TOL = 0.1;
 const TOLxTOL = 0.01;
-const DEFAULT_RADIUS = 0;
+const DEFAULT_RADIUS = 15;
 
 const Point = function (x, y) {
   this.x = x;
@@ -405,45 +405,187 @@ function getPath(pointArr) {
 
   let radius = DEFAULT_RADIUS;
 
+  // Remove the last point as it's duplicated
   pointArr.pop();
 
-  // 非圆角情况下直接返回
-  if (pointArr.length !== 4) {
+  // If there are less than 3 points, use the default path
+  if (pointArr.length < 3) {
     return getDefaultPath(pointArr);
   }
 
-  const [start, c1, c2, end] = pointArr;
-
-  if (Math.abs(start.y - end.y) < 2 * DEFAULT_RADIUS) {
-    radius = Math.abs(start.y - end.y) / 2;
+  // Check if it's a straight line
+  if (pointArr.every(p => p.x === pointArr[0].x) || pointArr.every(p => p.y === pointArr[0].y)) {
+    return ['M', pointArr[0].x, pointArr[0].y, 'L', _.last(pointArr).x, _.last(pointArr).y].join(' ');
   }
 
-  if (
-    _.first(pointArr).x === _.last(pointArr).x ||
-    _.first(pointArr).y === _.last(pointArr).y
-  ) {
+  // Handle the case for 4 points
+  if (pointArr.length === 4) {
+    const [start, c1, c2, end] = pointArr;
+
+    if (Math.abs(start.y - end.y) < 2 * DEFAULT_RADIUS) {
+      radius = Math.abs(start.y - end.y) / 2;
+    }
+
+    if (
+      _.first(pointArr).x === _.last(pointArr).x ||
+      _.first(pointArr).y === _.last(pointArr).y
+    ) {
+      return [
+        'M', _.first(pointArr).x, _.first(pointArr).y,
+        'L', _.last(pointArr).x, _.last(pointArr).y
+      ].join(' ');
+    }
+
+    if (_.first(pointArr).x > _.last(pointArr).x) {
+      pointArr = pointArr.reverse();
+    }
+
+    const arc1 = getDrawPoint(start, c1, c2, radius);
+    const arc2 = getDrawPoint(c1, c2, end, radius);
+
     return [
-      'M', _.first(pointArr).x, _.first(pointArr).y,
-      'L', _.last(pointArr).x, _.last(pointArr).y
+      'M', arc1[0].x, arc1[0].y,
+      'L', arc1[1].x, arc1[1].y,
+      'A', radius, radius, 90, 0, arc1[3], arc1[2].x, arc1[2].y,
+      'L', arc2[1].x, arc2[1].y,
+      'M', arc2[1].x, arc2[1].y,
+      'A', radius, radius, 90, 0, arc2[3], arc2[2].x, arc2[2].y,
+      'L', end.x, end.y,
     ].join(' ');
   }
 
+  // Ensure the path goes from left to right
   if (_.first(pointArr).x > _.last(pointArr).x) {
     pointArr = pointArr.reverse();
   }
 
-  const arc1 = getDrawPoint(start, c1, c2, radius);
-  const arc2 = getDrawPoint(c1, c2, end, radius);
+  // Optimized for 5 points
+  // if (pointArr.length === 5) {
+  //   return optimizeFivePoints(pointArr);
+  // }
+
+  // Optimized for 8 points
+  if (pointArr.length === 8) {
+    return optimizeEightPoints(pointArr);
+  }
+
+  // Optimized for 10 points
+  if (pointArr.length === 10) {
+    return optimizeTenPoints(pointArr);
+  }
+
+  // For other point counts, use the general approach
+  return generalPathApproach(pointArr);
+}
+
+// function optimizeFivePoints(points) {
+//   const [start, c1, middle, c2, end] = points;
+
+//   let radius1 = Math.min(DEFAULT_RADIUS, Math.abs(start.y - middle.y) / 2);
+//   let radius2 = Math.min(DEFAULT_RADIUS, Math.abs(middle.y - end.y) / 2);
+
+//   const arc1 = getDrawPoint(start, c1, middle, radius1);
+//   const arc2 = getDrawPoint(middle, c2, end, radius2);
+
+//   return [
+//     'M', start.x, start.y,
+//     'L', arc1[1].x, arc1[1].y,
+//     'A', radius1, radius1, 90, 0, arc1[3], arc1[2].x, arc1[2].y,
+//     'L', middle.x, middle.y,
+//     'L', arc2[1].x, arc2[1].y,
+//     'A', radius2, radius2, 90, 0, arc2[3], arc2[2].x, arc2[2].y,
+//     'L', end.x, end.y,
+//   ].join(' ');
+// }
+
+function optimizeEightPoints(points) {
+  const [start, c1, p1, c2, middle, c3, p2, end] = points;
+
+  let radius1 = Math.min(DEFAULT_RADIUS, Math.abs(start.y - p1.y) / 2);
+  let radius2 = Math.min(DEFAULT_RADIUS, Math.abs(p1.y - middle.y) / 2);
+  let radius3 = Math.min(DEFAULT_RADIUS, Math.abs(middle.y - p2.y) / 2);
+  let radius4 = Math.min(DEFAULT_RADIUS, Math.abs(p2.y - end.y) / 2);
+
+  const arc1 = getDrawPoint(start, c1, p1, radius1);
+  const arc2 = getDrawPoint(p1, c2, middle, radius2);
+  const arc3 = getDrawPoint(middle, c3, p2, radius3);
+  const arc4 = getDrawPoint(p2, end, end, radius4);
 
   return [
-    'M', arc1[0].x, arc1[0].y,
+    'M', start.x, start.y,
     'L', arc1[1].x, arc1[1].y,
-    'A', radius, radius, 90, 0, arc1[3], arc1[2].x, arc1[2].y,
+    'A', radius1, radius1, 90, 0, arc1[3], arc1[2].x, arc1[2].y,
+    'L', p1.x, p1.y,
     'L', arc2[1].x, arc2[1].y,
-    'M', arc2[1].x, arc2[1].y,
-    'A', radius, radius, 90, 0, arc2[3], arc2[2].x, arc2[2].y,
+    'A', radius2, radius2, 90, 0, arc2[3], arc2[2].x, arc2[2].y,
+    'L', middle.x, middle.y,
+    'L', arc3[1].x, arc3[1].y,
+    'A', radius3, radius3, 90, 0, arc3[3], arc3[2].x, arc3[2].y,
+    'L', p2.x, p2.y,
+    'L', arc4[1].x, arc4[1].y,
+    'A', radius4, radius4, 90, 0, arc4[3], arc4[2].x, arc4[2].y,
     'L', end.x, end.y,
   ].join(' ');
+}
+
+function optimizeTenPoints(points) {
+  const [start, c1, p1, c2, p2, middle, c3, p3, c4, end] = points;
+
+  let radius1 = Math.min(DEFAULT_RADIUS, Math.abs(start.y - p1.y) / 2);
+  let radius2 = Math.min(DEFAULT_RADIUS, Math.abs(p1.y - p2.y) / 2);
+  let radius3 = Math.min(DEFAULT_RADIUS, Math.abs(p2.y - middle.y) / 2);
+  let radius4 = Math.min(DEFAULT_RADIUS, Math.abs(middle.y - p3.y) / 2);
+  let radius5 = Math.min(DEFAULT_RADIUS, Math.abs(p3.y - end.y) / 2);
+
+  const arc1 = getDrawPoint(start, c1, p1, radius1);
+  const arc2 = getDrawPoint(p1, c2, p2, radius2);
+  const arc3 = getDrawPoint(p2, middle, middle, radius3);
+  const arc4 = getDrawPoint(middle, c3, p3, radius4);
+  const arc5 = getDrawPoint(p3, c4, end, radius5);
+
+  return [
+    'M', start.x, start.y,
+    'L', arc1[1].x, arc1[1].y,
+    'A', radius1, radius1, 90, 0, arc1[3], arc1[2].x, arc1[2].y,
+    'L', p1.x, p1.y,
+    'L', arc2[1].x, arc2[1].y,
+    'A', radius2, radius2, 90, 0, arc2[3], arc2[2].x, arc2[2].y,
+    'L', p2.x, p2.y,
+    'L', arc3[1].x, arc3[1].y,
+    'A', radius3, radius3, 90, 0, arc3[3], arc3[2].x, arc3[2].y,
+    'L', middle.x, middle.y,
+    'L', arc4[1].x, arc4[1].y,
+    'A', radius4, radius4, 90, 0, arc4[3], arc4[2].x, arc4[2].y,
+    'L', p3.x, p3.y,
+    'L', arc5[1].x, arc5[1].y,
+    'A', radius5, radius5, 90, 0, arc5[3], arc5[2].x, arc5[2].y,
+    'L', end.x, end.y,
+  ].join(' ');
+}
+
+function generalPathApproach(pointArr) {
+  let path = [`M ${pointArr[0].x} ${pointArr[0].y}`];
+
+  for (let i = 0; i < pointArr.length - 2; i++) {
+    const [start, middle, end] = pointArr.slice(i, i + 3);
+    
+    let segmentRadius = Math.min(DEFAULT_RADIUS, Math.abs(start.y - end.y) / 2);
+
+    const arc = getDrawPoint(start, middle, end, segmentRadius);
+
+    if (i === 0) {
+      path.push(`L ${arc[1].x} ${arc[1].y}`);
+    }
+    path.push(`A ${segmentRadius} ${segmentRadius} 90 0 ${arc[3]} ${arc[2].x} ${arc[2].y}`);
+    
+    if (i < pointArr.length - 3) {
+      path.push(`L ${end.x} ${end.y}`);
+    }
+  }
+
+  path.push(`L ${_.last(pointArr).x} ${_.last(pointArr).y}`);
+
+  return path.join(' ');
 }
 
 export { drawManhattan };
