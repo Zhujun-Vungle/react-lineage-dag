@@ -262,21 +262,23 @@ export default class TableNode extends Node {
         let rightPoint = $('<div class="point right-point hidden"></div>');
         fieldDom.append(leftPoint).append(rightPoint);
 
-        if (this.options._enableHoverChain) {
-          $(fieldDom).on('mouseover', (e) => {
-            this.emit('custom.field.hover', {
-              node: this,
-              fieldId: _field[_primaryKey]
-            });
+        
+        $(fieldDom).on('mouseover', (e) => {
+          $(e.currentTarget).addClass('hovered');
+          this.emit('custom.field.hover', {
+            node: this,
+            fieldId: _field[_primaryKey]
           });
+        });
       
-          $(fieldDom).on('mouseout', (e) => {
-            this.emit('custom.field.unHover', {
-              node: this,
-              fieldId: _field[_primaryKey]
-            });
+        $(fieldDom).on('mouseout', (e) => {
+          $(e.currentTarget).removeClass('hovered');
+          this.emit('custom.field.unHover', {
+            node: this,
+            fieldId: _field[_primaryKey]
           });
-        }
+        });
+
 
         $(fieldDom).on('click', (e) => {
           this.emit('custom.field.click', {

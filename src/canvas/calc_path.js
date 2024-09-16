@@ -259,7 +259,7 @@ const getDrawPoint = (start, control, end, radius) => {
 };
 
 function drawManhattan(sourcePoint, targetPoint, nodes) {
-  console.log('drawManhattan input:', { sourcePoint, targetPoint, nodes });
+  // console.log('drawManhattan input:', { sourcePoint, targetPoint, nodes });
   if (!sourcePoint.orientation) {
     sourcePoint.orientation = _calcOrientation(targetPoint.pos[0], targetPoint.pos[1], sourcePoint.pos[0], sourcePoint.pos[1]);
   }
@@ -366,7 +366,7 @@ function _routeCombined(conn, fromPt, fromDir, toPt, toDir, columnMap) {
 
   virtualPoints.push(toPt);
 
-  console.log('Virtual points:', virtualPoints);
+  // console.log('Virtual points:', virtualPoints);
 
   // Iterate through virtual points and apply _route
   for (let i = 0; i < virtualPoints.length - 1; i++) {
