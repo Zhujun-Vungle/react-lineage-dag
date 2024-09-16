@@ -342,7 +342,7 @@ function _routeCombined(conn, fromPt, fromDir, toPt, toDir, columnMap) {
   }
 
   // Add some padding to maxY
-  maxY += 100;
+  maxY += 80;
 
   for (let i = 0; i < columns.length - 1; i++) {
     const currentCol = columns[i];
