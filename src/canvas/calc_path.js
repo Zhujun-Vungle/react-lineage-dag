@@ -4,10 +4,10 @@ const LEFT = 'Left';
 const RIGHT = 'Right';
 const TOP = 'Top';
 const BOTTOM = 'Bottom';
-const MINDIST = 20;
+const MINDIST = 60;
 const TOL = 0.1;
 const TOLxTOL = 0.01;
-const DEFAULT_RADIUS = 15;
+const DEFAULT_RADIUS = 0;
 
 const Point = function (x, y) {
   this.x = x;
@@ -15,7 +15,7 @@ const Point = function (x, y) {
 };
 
 // 曼哈顿折线路由算法
-function _route(conn, fromPt, fromDir, toPt, toDir) {
+function _route(conn, fromPt, fromDir, toPt, toDir, turnPct = 2) {
   // 防止图上节点隐藏NaN的死循环问题
   fromPt.x = fromPt.x || 0;
   fromPt.y = fromPt.y || 0;
@@ -48,7 +48,7 @@ function _route(conn, fromPt, fromDir, toPt, toDir) {
         pos = Math.min(fromPt.x, toPt.x) - MINDIST;
         point = new Point(pos, fromPt.y);
       } else {
-        point = new Point(fromPt.x - (xDiff / 2), fromPt.y);
+        point = new Point(fromPt.x - (xDiff / turnPct), fromPt.y);
       }
 
       if (yDiff > 0) {
@@ -70,7 +70,7 @@ function _route(conn, fromPt, fromDir, toPt, toDir) {
         pos = Math.max(fromPt.x, toPt.x) + MINDIST;
         point = new Point(pos, fromPt.y);
       } else {
-        point = new Point(fromPt.x - (xDiff / 2), fromPt.y);
+        point = new Point(fromPt.x - (xDiff / turnPct), fromPt.y);
       }
 
       if (yDiff > 0) {
@@ -125,7 +125,7 @@ function _route(conn, fromPt, fromDir, toPt, toDir) {
     }
   }
 
-  _route(conn, point, dir, toPt, toDir);
+  _route(conn, point, dir, toPt, toDir, turnPct);
 }
 
 const getDefaultPath = (pointArr) => {
@@ -258,7 +258,8 @@ const getDrawPoint = (start, control, end, radius) => {
   return [start, p1, p2, flag];
 };
 
-function drawManhattan(sourcePoint, targetPoint) {
+function drawManhattan(sourcePoint, targetPoint, nodes) {
+  console.log('drawManhattan input:', { sourcePoint, targetPoint, nodes });
   if (!sourcePoint.orientation) {
     sourcePoint.orientation = _calcOrientation(targetPoint.pos[0], targetPoint.pos[1], sourcePoint.pos[0], sourcePoint.pos[1]);
   }
@@ -282,8 +283,120 @@ function drawManhattan(sourcePoint, targetPoint) {
     '0-1': TOP,
     '01': BOTTOM,
   };
-  // link:connect 中 orientation = undefined
-  _route(pointArr, fromPt, orientation[sourcePoint.orientation.join('')], toPt, orientation[targetPoint.orientation.join('')]);
+
+  const columnMap = createColumnMap(nodes);
+
+  _routeCombined(pointArr, fromPt, orientation[sourcePoint.orientation.join('')], toPt, orientation[targetPoint.orientation.join('')], columnMap);
+  return getPath(pointArr);
+}
+
+function createColumnMap(nodes) {
+  const columnMap = {};
+  nodes.forEach(node => {
+    const centerX = node.left + (node.width / 2);
+    const column = Math.floor(centerX);
+    if (!columnMap[column]) {
+      columnMap[column] = [];
+    }
+    columnMap[column].push({
+      ...node,
+      centerX: centerX
+    });
+  });
+  return columnMap;
+}
+
+function _routeCombined(conn, fromPt, fromDir, toPt, toDir, columnMap) {
+  // console.log('_routeCombined input:', { fromPt, fromDir, toPt, toDir });
+
+  // Log all columnMap info
+  // console.log('Full columnMap info:');
+  // for (let col in columnMap) {
+  //   console.log(`Column ${col}:`, columnMap[col].map(node => ({
+  //     left: node.left,
+  //     top: node.top,
+  //     width: node.width,
+  //     height: node.height
+  //   })));
+  // }
+
+  // Determine the columns for start and end points
+  const columns = Object.keys(columnMap).map(Number).sort((a, b) => a - b);
+  const startColumn = columns.find(col => col >= fromPt.x) || columns[columns.length - 1];
+  const endColumn = columns.find(col => col >= toPt.x) || columns[columns.length - 1];
+  const minColumn = Math.min(startColumn, endColumn);
+  const maxColumn = Math.max(startColumn, endColumn);
+
+  // console.log('Columns:', { startColumn, endColumn, minColumn, maxColumn });
+
+  // Create virtual points between columns
+  let virtualPoints = [fromPt];
+  let maxY = Math.max(fromPt.y, toPt.y);
+
+  for (let col = minColumn; col <= maxColumn; col++) {
+    if (columnMap[col] && columnMap[col].length > 0) {
+      const nodesInColumn = columnMap[col];
+      const lowestNodeBottom = Math.max(...nodesInColumn.map(node => node.top + node.height));
+      maxY = Math.max(maxY, lowestNodeBottom);
+    }
+  }
+
+  // Add some padding to maxY
+  maxY += 80;
+
+  for (let i = 0; i < columns.length - 1; i++) {
+    const currentCol = columns[i];
+    const nextCol = columns[i + 1];
+    
+    if (currentCol >= minColumn && nextCol <= maxColumn) {
+      const midX = currentCol + (nextCol - currentCol) / 2;
+      // Apply the new rules
+      if (i === 0 && fromDir === LEFT) {
+        // For the first middle point when fromDir is LEFT
+        virtualPoints.push(new Point(midX, maxY));
+      } else if (i > 0) {
+        // For subsequent middle points
+          virtualPoints.push(new Point(midX, maxY));
+        // }
+      } else {
+        virtualPoints.push(new Point(midX, maxY));
+      }
+    }
+  }
+
+  virtualPoints.push(toPt);
+
+  console.log('Virtual points:', virtualPoints);
+
+  // Iterate through virtual points and apply _route
+  for (let i = 0; i < virtualPoints.length - 1; i++) {
+    const currentPt = virtualPoints[i];
+    const nextPt = virtualPoints[i + 1];
+    let currentDir, nextDir;
+
+    if (i === 0) {
+      currentDir = fromDir;
+    } else {
+      currentDir = RIGHT;
+    }
+
+    if (i === virtualPoints.length - 2) {
+      nextDir = toDir;
+    } else {
+      nextDir = LEFT;
+    }
+
+    let tempConn = [];
+    _route(tempConn, currentPt, currentDir, nextPt, nextDir, 4);
+
+    if (i > 0) {
+      tempConn.shift(); // Remove the first point to avoid duplication
+    }
+    conn.push(...tempConn);
+  }
+}
+
+function getPath(pointArr) {
   if (pointArr.length < 2) return '';
 
   if (pointArr.length === 2) {
@@ -333,4 +446,4 @@ function drawManhattan(sourcePoint, targetPoint) {
   ].join(' ');
 }
 
-export default drawManhattan;
+export { drawManhattan };
